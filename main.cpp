@@ -132,8 +132,5 @@ int main() {
         cout << "x1 = " << gen.population[0][i].person.x_1 << " x2 = " << gen.population[0][i].person.x_2 << " fitness = " << gen.population[0][i].fitness_value <<
         " Chance = "<< gen.population[0][i].selection_chance <<endl;
     }
-
-    cout << "testing" << endl;
-
     return 0;
 }
