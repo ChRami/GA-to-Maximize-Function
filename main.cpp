@@ -133,5 +133,7 @@ int main() {
         " Chance = "<< gen.population[0][i].selection_chance <<endl;
     }
 
+    cout << "testing" << endl;
+
     return 0;
 }
