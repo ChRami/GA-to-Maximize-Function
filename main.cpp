@@ -17,7 +17,7 @@ struct gene {
 struct chromosome {
     gene person;
     double fitness_value;
-    //double selection_chance;
+    double selection_chance;
 
 };
 
@@ -33,37 +33,41 @@ void calc_fitness(chromosome & x){
     x.fitness_value = 21.5 + x.person.x_1 * sin(4* M_PI *x.person.x_1) + x.person.x_2 * sin(20* M_PI *x.person.x_2);
 }
 
-void rank_population(vector<chromosome> & population_input) {
+void sort_population(vector<chromosome> & population_input) {
     sort(population_input.begin(), population_input.end(), [](chromosome &lhs, chromosome rhs) {
         return lhs.fitness_value < rhs.fitness_value;
     });
 }
 
-//void generate_selection_chance(vector<chromosome> & population_input, const double s) {
-//    int total_population = population_input.size();
-//    for (int rank = 0; rank < population_input.size(); ++rank) {
-//        population_input[rank].selection_chance = (2. - s)/(total_population) + 2. * rank * (s - 1.)/(total_population * (total_population - 1.));
-//    }
-//};
+void generate_selection_chance(vector<chromosome> & population_input, const double s) {
+    int total_population = population_input.size();
+    for (int rank = 0; rank < population_input.size(); ++rank) {
+        population_input[rank].selection_chance = (2. - s)/(total_population) + 2. * rank * (s - 1.)/(total_population * (total_population - 1.));
+    }
+};
 
-//int parent_selection_rank_based(vector<chromosome> & population_input, function<double(void)> rand01) {
-//    double cumulative_probability = 0;
-//    vector<double> cumulative_probabilities(population_input.size());
-//    for(int i = 0; i < population_input.size(); ++i) {
-//        cumulative_probability += population_input[i].selection_chance;
-//        cumulative_probabilities[i] = cumulative_probability;
-//    }
-//    double r = rand01();        //r is a random number from 0 to 1
-//    int position = 0;
-//    while(position < population_input.size() && r > cumulative_probabilities[position]) {
-//        //while you are not exceeding population size and you check the first cumulative probability that is more than r
-//        position++;
-//    }
-//    cout << "position is " << position << endl;
-//    return position;    //return the first position that's greater than r
-//}
+//The function below is on lecture 3, slide 8
+
+int parent_selection_rank_based(vector<chromosome> & population_input, function<double(void)> rand01) {
+    double cumulative_probability = 0;
+    vector<double> cumulative_probabilities(population_input.size());
+    for(int i = 0; i < population_input.size(); ++i) {
+        cumulative_probability += population_input[i].selection_chance;
+        cumulative_probabilities[i] = cumulative_probability;
+    }
+    double r = rand01();        //r is a random number from 0 to 1
+    int position = 0;
+    while(position < population_input.size() && r > cumulative_probabilities[position]) {
+        //while you are not exceeding population size and you check the first cumulative probability that is more than r
+        position++;
+    }
+    //cout << "position is " << position << endl;
+    return position;    //return the first position that's greater than r
+}
+
 
 // The function below is implementing tournament selection for the population
+// It is located on Lecture 3, slide 11
 
 int parent_selection_tournament(vector<chromosome> & population_input, const int k, function<double(void)> rand01) {
     int winner = -1;
@@ -81,6 +85,8 @@ int parent_selection_tournament(vector<chromosome> & population_input, const int
             continue;
         }
     }
+
+    //For loop below is intended to take the fittest out of the randomly selected k number of parents
     vector<int> indices_vec(indices.begin(), indices.end());
     for(int i = 0; i < k; ++i) {
         int index = indices_vec[i];
@@ -93,69 +99,29 @@ int parent_selection_tournament(vector<chromosome> & population_input, const int
     return winner;    //return the first position that's greater than r
 }
 
-//
-//void crossover_and_mutation_rank_based(generation & gen, int this_generation, const double crossover_fraction, const double mutation_chance, function<double(void)> rand_x1, function<double(void)> rand_x2, function<double(void)> rand01) {
-//    int number_of_crossovers = round(gen.population[this_generation].size() * crossover_fraction);
-//    for(int i = 0; i < number_of_crossovers; ++i) {
-//        int position1 = parent_selection_rank_based(gen.population[this_generation], rand01);
-//        chromosome X1 = gen.population[this_generation][position1];
-//        int position2 = parent_selection_rank_based(gen.population[this_generation], rand01);
-//        chromosome X2 = gen.population[this_generation][position2];
-//        chromosome X_new;
-//        double random_number_x1 = rand_x1();
-//
-//        //go to lecture 2, slide 25
-//        double crossover_x1_rand = rand01();
-//        X_new.person.x_1 = X1.person.x_1 * crossover_x1_rand + (1 - crossover_x1_rand) * X2.person.x_1;
-//        //performing intermediate crossover between the x_1 of both parents
-//        double crossover_x2_rand = rand01();
-//        X_new.person.x_2 = X1.person.x_2 * crossover_x2_rand + (1 - crossover_x2_rand) * X2.person.x_2;
-//        //performing intermediate crossover between the x_2 of both parents
-//        double check_mutation = rand01();
-//        //go to lecture 2, slide 18
-//        if(check_mutation < mutation_chance) {
-//            double mutate1 = rand01();
-//            double mutate2 = rand01();
-//            X_new.person.x_1 + (mutate1 - mutate2) * 12;
-//            if(X_new.person.x_1 > 12) {
-//                X_new.person.x_1 = X_new.person.x_1 - 12;
-//            }
-//            else if(X_new.person.x_1 < -12){
-//                X_new.person.x_1 = X_new.person.x_1 + 12;
-//            }
-//            X_new.person.x_2 + (mutate1 - mutate2) * 6;
-//            if(X_new.person.x_2 > 6) {
-//                X_new.person.x_2 = X_new.person.x_2 - 6;
-//            }
-//            else if(X_new.person.x_2 < -6){
-//                X_new.person.x_2 = X_new.person.x_2 + 6;
-//            }
-//        }
-//        //putting them in the next generation which is gen.population[current generation + 1][individual within that generation]
-//        calc_fitness(X_new);
-//        //populating the new generation with the crossovers
-//        gen.population[this_generation + 1][i] = X_new;
-//    }
-//    // Put the best genes from previous generation into the new generation.
-//    //The for loop decrements from lowest up until the number of crossovers
-//    for(int i = gen.population[this_generation].size() - 1; i >= number_of_crossovers; --i) {
-//        gen.population[this_generation + 1][i] = gen.population[this_generation][i];
-//    }
-//}
 
-void crossover_and_mutation_tournament(generation & gen, int this_generation, const double crossover_fraction, const double mutation_chance, const int k, function<double(void)> rand01) {
-    int number_of_crossovers = round(gen.population[this_generation].size() * crossover_fraction);
+void crossover_and_mutation_function(generation & gen, int this_generation, const double crossover_probability, const double mutation_probability, const int k, function<double(void)> rand01, int selector) {
+    int position1,position2 = 0;
+    int number_of_crossovers = round(gen.population[this_generation].size() * crossover_probability);
     for(int i = 0; i < number_of_crossovers; ++i) {
 
         //Figuring out index of parent 1
-        int position1 = parent_selection_tournament(gen.population[this_generation], k, rand01);
-
+        if(selector == 0) {
+            position1 = parent_selection_tournament(gen.population[this_generation], k, rand01);
+        } else{
+            generate_selection_chance(gen.population[this_generation],2);
+            position1 = parent_selection_rank_based(gen.population[this_generation], rand01);
+        }
         //Taking parent 1
         chromosome X1 = gen.population[this_generation][position1];
 
         //Figuring out index of parent 2
-        int position2 = parent_selection_tournament(gen.population[this_generation], k, rand01);
-
+        if(selector == 0) {
+            position2 = parent_selection_tournament(gen.population[this_generation], k, rand01);
+        } else{
+            generate_selection_chance(gen.population[this_generation],2);
+            position2 = parent_selection_rank_based(gen.population[this_generation], rand01);
+        }
         //Taking parent 2
         chromosome X2 = gen.population[this_generation][position2];
 
@@ -179,7 +145,7 @@ void crossover_and_mutation_tournament(generation & gen, int this_generation, co
         //go to lecture 2, slide 18
         //For mutation
 
-        if(check_mutation < mutation_chance) {
+        if(check_mutation < mutation_probability) {
             double mutate1 = rand01();
             double mutate2 = rand01();
             X_new.person.x_1 + (mutate1 - mutate2) * 12;
@@ -237,6 +203,18 @@ double calculate_standard_deviation(vector<chromosome> & population_input, doubl
 
 
 int main() {
+    int nb_of_generations = 500;
+    int total_population = 10000;
+    int selector;
+//    cout << "Insert population size: " << endl;
+//    cin >> total_population;
+//    cout << "Insert how many generations: " << endl;
+//    cin >> nb_of_generations;
+    cout << "Select which version to Implement: " << endl << "0: First version where tournament based selection was used " << endl
+    << "1: Second version where rank based selection was used" << endl;
+    cin >> selector;
+
+
     ofstream data_file_mean("mean.csv");
     ofstream data_file_standard_deviation("standardDeviation.csv");
     //data_file_mean.open("data.csv");
@@ -254,8 +232,7 @@ int main() {
     // http://www.cplusplus.com/reference/random/uniform_real_distribution/
 
 
-    int nb_of_generations = 500;
-    int total_population = 10000;
+
     double mean = 0;
     double standard_deviation = 0;
 
@@ -275,12 +252,11 @@ int main() {
 
 
 
-    //rank_population is essentially sorting the vector from 0 to 1000 (lowest fitness to highest fitness
-    rank_population(gen.population[0]); //ranking population which is the vector within the generation 0
+    //sort_population is essentially sorting the vector from 0 to 1000 (lowest fitness to highest fitness
+    sort_population(gen.population[0]); //ranking population which is the vector within the generation 0
 
 
     mean = calculate_mean(gen.population[0] ,0);
-    //cout << "The mean of the initial generation is: " << mean << endl;
 
     data_file_mean << "Generation" << "," << "Mean" << "\n" << 0 << "," << mean << "\n";
 
@@ -289,10 +265,10 @@ int main() {
     data_file_standard_deviation << "Generation" << "," << "Standard Deviation" << "\n" << 0 << "," << standard_deviation << "\n";
 
     // generate_selection_chance(gen.population[0],2);     //you calculate the chance based off of ranking
-    crossover_and_mutation_tournament(gen, 0, 0.8, 0.1, 4, [&](){return distr01(rng);});
+    crossover_and_mutation_function(gen, 0, 0.8, 0.1, 4, [&]() { return distr01(rng); },selector);
 
     //ranked population 1
-    rank_population(gen.population[1]);
+    sort_population(gen.population[1]);
 
     mean = calculate_mean(gen.population[1], 1);
     data_file_mean << 1 << "," << mean << "\n";
@@ -300,14 +276,6 @@ int main() {
 
     standard_deviation = calculate_standard_deviation(gen.population[1],mean,1);
     data_file_standard_deviation << 1 << "," << standard_deviation << "\n";
-
-
-
-    //the block of code below outputs the chromosomes in generation 0
-//    for(int i = 0; i < gen.population[1].size(); ++i){
-//        cout << "x1 = " << gen.population[1][i].person.x_1 << " x2 = " << gen.population[1][i].person.x_2 << " fitness = " << gen.population[1][i].fitness_value << endl;
-//    }
-
 
 
     //took the best fit in generation 1 which was ranked previously
@@ -325,8 +293,8 @@ int main() {
     int count_best_fitness = 0;
     for(int i = 1; i < nb_of_generations - 1; i++) {
 
-        crossover_and_mutation_tournament(gen, i, 0.8, 0.1, 4, [&](){return distr01(rng);});
-        rank_population(gen.population[i + 1]);
+        crossover_and_mutation_function(gen, i, 0.8, 0.1, 4, [&]() { return distr01(rng); },selector);
+        sort_population(gen.population[i + 1]);
 
         mean = calculate_mean(gen.population[i], i);
         data_file_mean << i << "," << mean << "\n";
