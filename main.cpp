@@ -10,6 +10,14 @@
 #include <fstream>
 using namespace std;
 
+
+/****************************************************************************************
+ *
+ *              Initializing population
+ *              Below
+ *
+ *****************************************************************************************/
+
 struct gene {
     double x_1, x_2;
 };
@@ -37,8 +45,20 @@ void sort_population(vector<chromosome> & population_input) {
     sort(population_input.begin(), population_input.end(), [](chromosome &lhs, chromosome rhs) {
         return lhs.fitness_value < rhs.fitness_value;
     });
+    //Reference to the sorting function above
+    //http://www.cplusplus.com/articles/NhA0RXSz/
 }
 
+
+/****************************************************************************************
+ *
+ *              Rank based selection portion
+ *              Below
+ *
+ *****************************************************************************************/
+
+
+//This function generates selection chances and then adds it to each individual (selection_chance)
 void generate_selection_chance(vector<chromosome> & population_input, const double s) {
     int total_population = population_input.size();
     for (int rank = 0; rank < population_input.size(); ++rank) {
@@ -66,12 +86,23 @@ int parent_selection_rank_based(vector<chromosome> & population_input, function<
 }
 
 
+/****************************************************************************************
+ *
+ *              Tournament based selection portion
+ *              Below
+ *
+ *****************************************************************************************/
+
+
+
 // The function below is implementing tournament selection for the population
 // It is located on Lecture 3, slide 11
 
 int parent_selection_tournament(vector<chromosome> & population_input, const int k, function<double(void)> rand01) {
     int winner = -1;
-    double best_fitness = -numeric_limits<double>::max_digits10; // set best_fitness minus infinity
+    double best_fitness = -numeric_limits<double>::max(); // set best_fitness to the smallest value possible
+    //Reference for above line
+    //https://en.cppreference.com/w/cpp/types/numeric_limits
     set<int> indices;
     int count = 0;
     // we want k number of unique indices
@@ -100,13 +131,24 @@ int parent_selection_tournament(vector<chromosome> & population_input, const int
 }
 
 
+
+/****************************************************************************************
+ *
+ *              Crossover and mutation portion
+ *              Below
+ *
+ *****************************************************************************************/
+
+
+
 void crossover_and_mutation_function(generation & gen, int this_generation, const double crossover_probability, const double mutation_probability, const int k, function<double(void)> rand01, int selector) {
     int position1,position2 = 0;
+    //int number_of_crossovers = 5;
     int number_of_crossovers = round(gen.population[this_generation].size() * crossover_probability);
     for(int i = 0; i < number_of_crossovers; ++i) {
 
         //Figuring out index of parent 1
-        if(selector == 0) {
+        if(selector == 0 || selector == 1) {
             position1 = parent_selection_tournament(gen.population[this_generation], k, rand01);
         } else{
             generate_selection_chance(gen.population[this_generation],2);
@@ -116,7 +158,7 @@ void crossover_and_mutation_function(generation & gen, int this_generation, cons
         chromosome X1 = gen.population[this_generation][position1];
 
         //Figuring out index of parent 2
-        if(selector == 0) {
+        if(selector == 0 || selector == 1) {
             position2 = parent_selection_tournament(gen.population[this_generation], k, rand01);
         } else{
             generate_selection_chance(gen.population[this_generation],2);
@@ -144,23 +186,22 @@ void crossover_and_mutation_function(generation & gen, int this_generation, cons
         double check_mutation = rand01();
         //go to lecture 2, slide 18
         //For mutation
-
-        if(check_mutation < mutation_probability) {
-            double mutate1 = rand01();
-            double mutate2 = rand01();
-            X_new.person.x_1 + (mutate1 - mutate2) * 12;
-            if(X_new.person.x_1 > 12) {
-                X_new.person.x_1 = X_new.person.x_1 - 12;
-            }
-            else if(X_new.person.x_1 < -12){
-                X_new.person.x_1 = X_new.person.x_1 + 12;
-            }
-            X_new.person.x_2 + (mutate1 - mutate2) * 6;
-            if(X_new.person.x_2 > 6) {
-                X_new.person.x_2 = X_new.person.x_2 - 6;
-            }
-            else if(X_new.person.x_2 < -6){
-                X_new.person.x_2 = X_new.person.x_2 + 6;
+        if(selector == 1 || selector == 2) {
+            if (check_mutation < mutation_probability) {
+                double mutate1 = rand01();
+                double mutate2 = rand01();
+                X_new.person.x_1 + (mutate1 - mutate2) * 12;
+                if (X_new.person.x_1 > 12) {
+                    X_new.person.x_1 = X_new.person.x_1 - 12;
+                } else if (X_new.person.x_1 < -12) {
+                    X_new.person.x_1 = X_new.person.x_1 + 12;
+                }
+                X_new.person.x_2 + (mutate1 - mutate2) * 6;
+                if (X_new.person.x_2 > 6) {
+                    X_new.person.x_2 = X_new.person.x_2 - 6;
+                } else if (X_new.person.x_2 < -6) {
+                    X_new.person.x_2 = X_new.person.x_2 + 6;
+                }
             }
         }
         //putting them in the next generation which is gen.population[current generation + 1][individual within that generation]
@@ -176,7 +217,15 @@ void crossover_and_mutation_function(generation & gen, int this_generation, cons
 }
 
 
-double calculate_mean(vector<chromosome> & population_input, int current_generation){
+/****************************************************************************************
+ *
+ *              Mean and standard deviation portion
+ *              Below
+ *
+ *****************************************************************************************/
+
+
+double calculate_mean(vector<chromosome> & population_input){
     double sum = 0;
     for(int index = 0; index < population_input.size(); ++index){
         sum += population_input[index].fitness_value;
@@ -186,7 +235,7 @@ double calculate_mean(vector<chromosome> & population_input, int current_generat
 }
 
 
-double calculate_standard_deviation(vector<chromosome> & population_input, double mean, int current_generation){
+double calculate_standard_deviation(vector<chromosome> & population_input, double mean){
     double standard_deviation = 0.0;
     double subtraction = 0;
     double squared = 0;
@@ -202,21 +251,30 @@ double calculate_standard_deviation(vector<chromosome> & population_input, doubl
 }
 
 
+/****************************************************************************************
+ *
+ *              Main function
+ *              Below
+ *
+ *****************************************************************************************/
+
+
 int main() {
-    int nb_of_generations = 500;
-    int total_population = 10000;
+    int nb_of_generations;
+    int total_population;
     int selector;
-//    cout << "Insert population size: " << endl;
-//    cin >> total_population;
-//    cout << "Insert how many generations: " << endl;
-//    cin >> nb_of_generations;
-    cout << "Select which version to Implement: " << endl << "0: First version where tournament based selection was used " << endl
-    << "1: Second version where rank based selection was used" << endl;
+    cout << "Insert population size (Experimented: 500): " << endl;
+    cin >> total_population;
+    cout << "Insert how many generations (Experimented: 1000): " << endl;
+    cin >> nb_of_generations;
+    cout << "Select which version to Implement: " << endl << "0: First version where tournament based selection was used with crossover" << endl
+    << "1: Second version where tournament based selection was used with crossover and mutation" << endl << "2: Second version where rank based selection was used" << endl;
     cin >> selector;
 
 
     ofstream data_file_mean("mean.csv");
     ofstream data_file_standard_deviation("standardDeviation.csv");
+    ofstream data_file_fitness("fitness.csv");
     //data_file_mean.open("data.csv");
     std::mt19937_64 rng; // random generator
     uint64_t timeSeed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -251,36 +309,36 @@ int main() {
     }
 
 
-
     //sort_population is essentially sorting the vector from 0 to 1000 (lowest fitness to highest fitness
     sort_population(gen.population[0]); //ranking population which is the vector within the generation 0
 
+    //Obtaining the fittest individual in generation 0
+    double best_fitness = gen.population[0][total_population - 1].fitness_value;
+    data_file_fitness << "Generation" << "," << "Fittest Individual" << "\n" << 0 << "," << best_fitness << "\n";
 
-    mean = calculate_mean(gen.population[0] ,0);
-
+    //Calculating mean
+    mean = calculate_mean(gen.population[0]);
     data_file_mean << "Generation" << "," << "Mean" << "\n" << 0 << "," << mean << "\n";
 
-    standard_deviation = calculate_standard_deviation(gen.population[0],mean,0);
-
+    //Calculating standard deviation
+    standard_deviation = calculate_standard_deviation(gen.population[0],mean);
     data_file_standard_deviation << "Generation" << "," << "Standard Deviation" << "\n" << 0 << "," << standard_deviation << "\n";
 
-    // generate_selection_chance(gen.population[0],2);     //you calculate the chance based off of ranking
-    crossover_and_mutation_function(gen, 0, 0.8, 0.1, 4, [&]() { return distr01(rng); },selector);
+    crossover_and_mutation_function(gen, 0, 0.8, 0.5, 4, [&]() { return distr01(rng); }, selector);
 
     //ranked population 1
     sort_population(gen.population[1]);
+    best_fitness = gen.population[1][total_population - 1].fitness_value;
+    data_file_fitness << 1 << "," << best_fitness << "\n";
 
-    mean = calculate_mean(gen.population[1], 1);
+    mean = calculate_mean(gen.population[1]);
     data_file_mean << 1 << "," << mean << "\n";
 
 
-    standard_deviation = calculate_standard_deviation(gen.population[1],mean,1);
+    standard_deviation = calculate_standard_deviation(gen.population[1],mean);
     data_file_standard_deviation << 1 << "," << standard_deviation << "\n";
 
 
-    //took the best fit in generation 1 which was ranked previously
-    //Consider removing
-    double best_fitness = gen.population[1][total_population - 1].fitness_value;
 
 
     //The block of code below considers generation 2 and onwards. Generation 1 was initialized in the beginning
@@ -290,23 +348,21 @@ int main() {
 
 
 
-    int count_best_fitness = 0;
     for(int i = 1; i < nb_of_generations - 1; i++) {
 
-        crossover_and_mutation_function(gen, i, 0.8, 0.1, 4, [&]() { return distr01(rng); },selector);
+        crossover_and_mutation_function(gen, i, 0.8, 0.5, 4, [&]() { return distr01(rng); },selector);
         sort_population(gen.population[i + 1]);
+        best_fitness = gen.population[i+1][total_population - 1].fitness_value;
+        data_file_fitness << i + 1 << "," << best_fitness << "\n" ;
 
-        mean = calculate_mean(gen.population[i], i);
-        data_file_mean << i << "," << mean << "\n";
-        standard_deviation = calculate_standard_deviation(gen.population[i],mean,i);
-        data_file_standard_deviation << i << "," << standard_deviation << "\n";
-
-        //Consider removing
-        double fitness = gen.population[i + 1][total_population - 1].fitness_value;
+        mean = calculate_mean(gen.population[i+1]);
+        data_file_mean << i+1 << "," << mean << "\n";
+        standard_deviation = calculate_standard_deviation(gen.population[i+1],mean);
+        data_file_standard_deviation << i + 1 << "," << standard_deviation << "\n";
 
     }
+    cout << "The Fittest Individual is: " << endl;
     cout << "x1 = " << gen.population[nb_of_generations - 1][total_population - 1].person.x_1 << " x2 = " << gen.population[nb_of_generations - 1][total_population - 1].person.x_2 << " fitness = " << gen.population[nb_of_generations - 1][total_population - 1].fitness_value << endl;
-   // data_file_mean.close();
 
     return 0;
 }
